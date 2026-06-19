@@ -1,3 +1,10 @@
+# SQLite database file — generated at runtime from db/schema.sql, never committed.
+# The schema (db/schema.sql) and its description (db/README.md) ARE committed.
+db/issues.db
+db/issues.db-journal
+db/issues.db-wal
+db/issues.db-shm
+
 # Logs
 logs
 *.log

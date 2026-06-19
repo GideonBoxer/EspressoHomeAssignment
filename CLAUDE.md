@@ -142,8 +142,8 @@ frontend.
 - **npm scripts:** `start` (run server), `dev` (auto-reload, e.g. `node --watch`),
   `import` (load `issues.csv`), `test`.
 - **Frontend → API:** same origin, relative `/api` (no CORS, no separate host).
-- **Windows:** `better-sqlite3` is a native module; keep the credentials/text files at
-  LF (see git note) and prefer prebuilt binaries.
+- **Windows:** `better-sqlite3` is a native module — confirmed working here via a
+  prebuilt binary (Node 24.17.0), no build tools needed. Keep text files at LF.
 
 ## Suggested frontend (from brief)
 
@@ -284,7 +284,16 @@ here with the reasoning, so it can go into the README and be defended in the int
 - [x] Created this CLAUDE.md
 - [x] Stack decisions (Express · SQLite · plain HTML+JS · EC2; see Decisions log)
 - [x] GitHub repo set up & connected (CLAUDE.md + assignment PDF on `main`)
-- [ ] Backend API + DB
+- [x] Dev environment — Node 24.17.0 LTS (via winget); `better-sqlite3` installed &
+  verified on Windows (prebuilt binary, no compiler needed)
+- [x] Database layer — `db/schema.sql` (single `issues` table), `db/README.md`
+  (schema description + scale story), `server/db.js` (opens DB + applies schema).
+  Verified: creates `db/issues.db` with the `issues` table; insert/read round-trip
+  works in the Node REPL.
+- [x] Minimal server — `server/app.js` (Express app + `GET /` health route) and
+  `server/server.js` (entry point: opens the DB on boot, listens on `PORT`). `npm start`
+  serves http://localhost:3000 and logs the DB row count. Express added as a dependency.
+- [ ] Backend API — `/api` routes (issues CRUD, `/api/dashboard`, `/api/import`) + validation
 - [ ] Frontend UI
 - [ ] CSV import
 - [ ] README
