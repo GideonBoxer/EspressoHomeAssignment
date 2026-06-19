@@ -28,6 +28,18 @@ The author of this submission (the person who will defend it in the interview) i
   best-documented, least "magic" Node framework) — chosen partly *for learnability*.
 - The author must be able to **read and defend every line**.
 
+## GitHub / repository
+
+- **Repo (public):** https://github.com/GideonBoxer/EspressoHomeAssignment.git
+- **Default branch:** `main`
+
+**Branching / PR workflow** (per task):
+1. `git checkout main && git pull origin main`
+2. `git checkout -b <feature-branch>`
+3. build + commit
+4. `git push -u origin <feature-branch>`, then open a PR from the compare link
+5. After merge: `git checkout main && git pull`, delete the merged local branch
+
 ## What the app must let a user do
 
 - Create / edit / resolve issues
@@ -62,10 +74,76 @@ The author of this submission (the person who will defend it in the interview) i
 5. **Basic UX** — clean page with: create issue form, issues table with filters,
    dashboard summary chips/cards.
 
-## API
+## API contract
 
-- As we see fit. **Use JSON.**
-- **Validate inputs; return 400s on bad data.**
+JSON over HTTP, base path **`/api`**. This is the agreed contract so the backend and
+frontend stay in sync even if built in separate sessions.
+
+**`Issue` JSON shape** (timestamps are ISO-8601 strings):
+```json
+{ "id": 1, "title": "...", "description": "...", "site": "Site-101",
+  "severity": "minor|major|critical", "status": "open|in_progress|resolved",
+  "createdAt": "2025-05-01T09:00:00Z", "updatedAt": "2025-05-01T09:00:00Z" }
+```
+
+**Endpoints:**
+| Method | Path | Purpose | Success |
+| --- | --- | --- | --- |
+| `GET` | `/api/issues` | list (see query params) | `200` → `Issue[]` |
+| `POST` | `/api/issues` | create | `201` → `Issue` |
+| `GET` | `/api/issues/:id` | detail | `200` → `Issue` / `404` |
+| `PUT` | `/api/issues/:id` | update (partial allowed); "Resolve" = set `status:"resolved"` | `200` → `Issue` / `404` |
+| `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
+| `GET` | `/api/dashboard` | counts | `200` (shape below) |
+| `POST` | `/api/import` | ingest CSV (file upload or raw CSV body) | `200` → `{ "imported": N }` |
+
+**List query params** (all optional): `search` (case-insensitive substring on `title`),
+`status` (enum), `severity` (enum), `sort` (default `createdAt:desc`).
+
+**Dashboard response:**
+```json
+{ "byStatus":   { "open": 0, "in_progress": 0, "resolved": 0 },
+  "bySeverity": { "minor": 0, "major": 0, "critical": 0 } }
+```
+
+**Validation** (else `400`): `title` & `description` required non-empty strings;
+`severity`/`status` must be in their enums (on create, default `severity:"minor"`,
+`status:"open"`); `site` optional string. Server sets `id`, `createdAt`, `updatedAt`.
+
+**Error format** (all 4xx/5xx): `{ "error": "<message>" }` (optionally a `details`
+array for field-level validation errors).
+
+## Project layout & conventions
+
+Single project at repo root: **one `package.json`, one `npm install`, one `npm start`**
+(simplest for the single-EC2 deploy). Express serves both the API and the static
+frontend.
+
+```
+/
+├─ server/            # Express app (one job per file)
+│  ├─ server.js       # entry point — starts the HTTP server
+│  ├─ app.js          # Express setup: middleware, mounts routes, serves frontend/
+│  ├─ db.js           # SQLite connection + schema init
+│  ├─ validation.js   # input validation + 400 helpers
+│  └─ routes/         # issues.js, dashboard.js, import.js
+├─ frontend/          # static files served by Express (index.html, app.js, styles.css)
+├─ db/                # schema.sql + short description (deliverable)
+├─ issues.csv         # provided sample data
+├─ package.json
+└─ README.md
+```
+
+**Conventions:**
+- **Node:** current LTS. **Package manager:** npm.
+- **Port:** `process.env.PORT || 3000`.
+- **DB file:** `db/issues.db` (gitignored); schema lives in `db/schema.sql`.
+- **Env vars:** `PORT`, `DB_PATH` (default `db/issues.db`).
+- **npm scripts:** `start` (run server), `dev` (auto-reload, e.g. `node --watch`),
+  `import` (load `issues.csv`), `test`.
+- **Frontend → API:** same origin, relative `/api` (no CORS, no separate host).
+- **Windows:** `better-sqlite3` is a native module; keep the credentials/text files at
+  LF (see git note) and prefer prebuilt binaries.
 
 ## Suggested frontend (from brief)
 
@@ -205,6 +283,7 @@ here with the reasoning, so it can go into the README and be defended in the int
 - [x] Read & understood the assignment
 - [x] Created this CLAUDE.md
 - [x] Stack decisions (Express · SQLite · plain HTML+JS · EC2; see Decisions log)
+- [x] GitHub repo set up & connected (CLAUDE.md + assignment PDF on `main`)
 - [ ] Backend API + DB
 - [ ] Frontend UI
 - [ ] CSV import
