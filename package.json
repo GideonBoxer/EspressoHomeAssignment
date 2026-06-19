@@ -1,0 +1,21 @@
+{
+  "name": "trial-issue-log",
+  "version": "1.0.0",
+  "description": "Track issues discovered during a clinical trial site visit (Espresso home assignment).",
+  "private": true,
+  "type": "commonjs",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "express": "^5.2.1"
+  }
+}
