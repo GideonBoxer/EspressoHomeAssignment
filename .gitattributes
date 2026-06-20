@@ -1,0 +1,9 @@
+# Normalize line endings so the repository always stores text files with LF,
+# regardless of which OS a contributor commits from. This keeps diffs clean
+# (no whole-file "everything changed" noise when an editor flips CR/LF) and
+# avoids CRLF breaking shell scripts on the Linux box we deploy to.
+#
+# `text=auto` lets Git detect text vs binary; `eol=lf` forces LF in the repo.
+# Add per-type overrides here if a file genuinely needs CRLF (e.g. Windows
+# batch files: `*.bat text eol=crlf`).
+* text=auto eol=lf
