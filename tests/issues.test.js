@@ -124,3 +124,37 @@ test("GET /api/issues honors search, filter, and sort params", async () => {
   assert.equal(res.status, 400);
   assert.equal(typeof res.body.error, "string");
 });
+
+test("GET /api/issues/:id returns a single issue for an existing id", async () => {
+  // Discover a real, server-assigned id from the list rather than hardcoding one
+  // (ids are auto-incremented, so we don't want the test to assume a value).
+  const list = await request(app).get("/api/issues");
+  const existing = list.body[0];
+
+  const res = await request(app).get(`/api/issues/${existing.id}`);
+
+  // 200 OK with the matching Issue as a single object (not an array).
+  assert.equal(res.status, 200);
+  assert.ok(!Array.isArray(res.body));
+  assert.equal(res.body.id, existing.id);
+  assert.equal(res.body.title, existing.title);
+});
+
+test("GET /api/issues/:id returns 404 for an id that doesn't exist", async () => {
+  // Only two rows are seeded, so id 99999 cannot exist.
+  const res = await request(app).get("/api/issues/99999");
+
+  // 404 with the contract's { "error": "..." } shape.
+  assert.equal(res.status, 404);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("GET /api/issues/:id returns 404 for a non-numeric id", async () => {
+  // The id column is an integer, so a non-numeric value like "abc" matches no
+  // row and falls through to the same 404 as a missing id (the contract only
+  // specifies 200 / 404 for this endpoint).
+  const res = await request(app).get("/api/issues/abc");
+
+  assert.equal(res.status, 404);
+  assert.equal(typeof res.body.error, "string");
+});
