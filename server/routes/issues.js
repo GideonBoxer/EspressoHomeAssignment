@@ -1,13 +1,12 @@
 // routes/issues.js — HTTP routes for the `issues` resource (the /api/issues path).
 //
-// This file is an Express "router": a small, self-contained group of routes that
-// app.js mounts under a base path (here, "/api/issues"). Keeping the issues
-// routes in their own file — separate from app.js and from the dashboard/import
-// routes — means each file has one clear job and stays short enough to read
-// top-to-bottom.
+// An Express "router" mounted by app.js under "/api/issues"; it holds the full CRUD
+// set (list, create, read-one, update, delete).
 //
-// For now this file holds the list route with search/filter/sort. The remaining
-// CRUD verbs (POST/GET-by-id/PUT/DELETE) will be added here in later steps.
+// Throughout this file, every user-supplied value goes into SQL as a NAMED bind
+// parameter (@name) — never string-concatenated — so there is no SQL-injection
+// surface. The only values we interpolate are our own fixed literals (e.g. the
+// ASC/DESC sort direction).
 
 const express = require("express");
 const db = require("../db"); // the one shared SQLite connection opened in db.js
@@ -52,9 +51,7 @@ router.get("/", (req, res) => {
   }
 
   // Build the WHERE clause one condition at a time. We collect SQL fragments in
-  // `conditions` and the matching values in `params`, then join them. Every
-  // user-supplied value goes in as a NAMED bind parameter (@name) — never
-  // string-concatenated — so there is no SQL-injection surface.
+  // `conditions` and the matching values in `params`, then join them.
   const conditions = [];
   const params = {};
 
@@ -77,16 +74,15 @@ router.get("/", (req, res) => {
   const whereClause =
     conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
 
-  // Sort direction. The only sortable column is createdAt (per the contract), so
-  // we never interpolate a user-supplied column name. The direction is chosen
-  // from our own fixed "ASC"/"DESC" literals — also safe to interpolate. Default
-  // is newest-first; only the exact value "createdAt:asc" flips it.
+  // Sort direction. The only sortable column is createdAt (per the contract), so we
+  // never interpolate a user-supplied column name. Default is newest-first; only the
+  // exact value "createdAt:asc" flips it.
   const direction = sort === "createdAt:asc" ? "ASC" : "DESC";
 
   const sql = `SELECT * FROM issues ${whereClause} ORDER BY createdAt ${direction}`;
 
-  // .all(params) runs the query with the bound values and returns the matching
-  // rows as an array of plain objects ([] when nothing matches).
+  // .all(params) returns the matching rows as an array of plain objects ([] when
+  // nothing matches).
   const issues = db.prepare(sql).all(params);
   res.json(issues);
 });
@@ -146,8 +142,7 @@ router.post("/", (req, res) => {
   // correctly as text, which is what the list route's ORDER BY relies on.
   const now = new Date().toISOString();
 
-  // Insert with named bind parameters (never string concatenation), applying the
-  // contract's defaults for any omitted optional fields.
+  // Insert, applying the contract's defaults for any omitted optional fields.
   const info = db
     .prepare(
       `INSERT INTO issues (title, description, site, severity, status, createdAt, updatedAt)
@@ -183,8 +178,7 @@ router.post("/", (req, res) => {
 //
 // We use .get() instead of .all(): .get() returns the first matching row as a plain
 // object, or `undefined` when nothing matches — and that `undefined` is exactly the
-// signal we need for the 404 case. The id is passed as a NAMED bind parameter (@id),
-// same as the list route's filters, so there is no SQL-injection surface.
+// signal we need for the 404 case.
 //
 // Note on non-numeric ids (e.g. /api/issues/abc): SQLite's id column is an integer,
 // so a non-numeric value simply matches no row and falls through to the 404 below.
@@ -309,8 +303,8 @@ router.put("/:id", (req, res) => {
 // better-sqlite3's .run() returns an info object whose `.changes` is the number
 // of rows affected. 0 means nothing matched that id — the same 404 signal the
 // GET/PUT routes get from an `undefined` row — so we branch on that. A non-numeric
-// id (e.g. /api/issues/abc) simply matches no row and falls through to 404, exactly
-// like GET /:id. On success there is no body to return, so we send 204 and end.
+// id falls through to 404 the same way it does in GET /:id. On success there is no
+// body to return, so we send 204 and end.
 //
 // Unlike PUT, we do not load the row first: delete only needs to know whether a row
 // existed, which `.changes` reports directly — one query instead of two.

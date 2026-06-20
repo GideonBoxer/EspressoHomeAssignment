@@ -1,12 +1,8 @@
 // routes/dashboard.js — HTTP route for the dashboard summary (the /api/dashboard path).
 //
-// Like routes/issues.js, this file is an Express "router": a small group of routes
-// that app.js mounts under a base path (here, "/api/dashboard"). It lives in its own
-// file — separate from the issues routes — because it is a different concern: the
-// issues router is CRUD over individual rows, while this one returns aggregate counts.
-//
-// It holds a single read-only route that powers the dashboard page: counts of issues
-// grouped by status and by severity.
+// An Express "router" mounted by app.js under "/api/dashboard". It holds a single
+// read-only route that powers the dashboard page: counts of issues grouped by status
+// and by severity (aggregates, not CRUD — which is why it is separate from issues.js).
 
 const express = require("express");
 const db = require("../db"); // the one shared SQLite connection opened in db.js

@@ -1,8 +1,5 @@
-// server.js — entry point. This is the file `npm start` runs.
-//
-// Its only job is to start the HTTP server. The Express app lives in app.js and
-// the database connection lives in db.js; this file wires them together and
-// begins listening.
+// server.js — entry point (`npm start`). Its only job is to wire the Express app
+// (app.js) and the database (db.js) together and start listening.
 
 const app = require("./app");
 const db = require("./db"); // opens the SQLite DB and applies the schema on boot
@@ -14,8 +11,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 
-  // Quick confirmation that the database opened and the schema is in place.
-  // This is just a startup sanity check, not an API endpoint.
+  // Startup sanity check that the database opened and the schema is in place.
   const count = db.prepare("SELECT COUNT(*) AS n FROM issues").get().n;
   console.log(`Database ready — issues table has ${count} row(s).`);
 });

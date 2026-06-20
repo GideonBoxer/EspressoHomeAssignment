@@ -1,13 +1,9 @@
-// app.js — Express application setup.
+// app.js — Express application setup. Builds the app but does NOT listen on a port
+// (server.js does that) — the split lets tests exercise routes without opening a
+// network port.
 //
-// This file builds the Express "app" (the thing that knows how to handle HTTP
-// requests) but does NOT start listening on a port — that is server.js's job.
-// Keeping the two separate means tests can import the app and exercise routes
-// without actually opening a network port.
-//
-// The app does two things: it serves the JSON API under /api, and it serves the
-// static frontend (plain HTML/CSS/JS) for everything else. One server, one origin —
-// so the frontend can call the API with relative /api paths and we need no CORS.
+// The app serves the JSON API under /api and the static frontend for everything else.
+// One server, one origin — so the frontend uses relative /api paths and needs no CORS.
 
 const path = require("path");
 const express = require("express");

@@ -1,9 +1,8 @@
 // routes/import.js — HTTP route for bulk-importing issues from a CSV (the /api/import path).
 //
-// Like the other route files, this is an Express "router" that app.js mounts under a
-// base path (here, "/api/import"). It holds a single route, POST /, that ingests a
-// whole CSV of issues in one request — this is what the frontend's "Upload batch (CSV)"
-// control calls.
+// An Express "router" mounted by app.js under "/api/import". It holds a single route,
+// POST /, that ingests a whole CSV of issues in one request — what the frontend's
+// "Upload batch (CSV)" control calls.
 //
 // HOW THE CSV ARRIVES: the client sends the raw CSV text as the request body with
 // Content-Type: text/csv. app.js has an express.text() middleware for that content

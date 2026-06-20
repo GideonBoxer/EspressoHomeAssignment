@@ -50,7 +50,6 @@ insert.run(newerIssue);
 test("GET /api/issues returns all issues, newest first", async () => {
   const res = await request(app).get("/api/issues");
 
-  // 200 OK with a JSON array of both seeded issues.
   assert.equal(res.status, 200);
   assert.ok(Array.isArray(res.body));
   assert.equal(res.body.length, 2);
@@ -59,8 +58,7 @@ test("GET /api/issues returns all issues, newest first", async () => {
   assert.equal(res.body[0].title, newerIssue.title);
   assert.equal(res.body[1].title, olderIssue.title);
 
-  // The first row matches the full Issue contract shape: a server-assigned
-  // numeric id plus every field we stored.
+  // The first row matches the full Issue contract shape (id + every stored field).
   const first = res.body[0];
   assert.equal(typeof first.id, "number");
   assert.equal(first.description, newerIssue.description);
@@ -133,7 +131,7 @@ test("GET /api/issues/:id returns a single issue for an existing id", async () =
 
   const res = await request(app).get(`/api/issues/${existing.id}`);
 
-  // 200 OK with the matching Issue as a single object (not an array).
+  // A single Issue object, not an array.
   assert.equal(res.status, 200);
   assert.ok(!Array.isArray(res.body));
   assert.equal(res.body.id, existing.id);
@@ -144,7 +142,6 @@ test("GET /api/issues/:id returns 404 for an id that doesn't exist", async () =>
   // Only two rows are seeded, so id 99999 cannot exist.
   const res = await request(app).get("/api/issues/99999");
 
-  // 404 with the contract's { "error": "..." } shape.
   assert.equal(res.status, 404);
   assert.equal(typeof res.body.error, "string");
 });
@@ -184,7 +181,6 @@ test("POST /api/issues creates an issue and returns 201", async () => {
 
   const res = await request(app).post("/api/issues").send(payload);
 
-  // 201 Created with the new Issue as a single object.
   assert.equal(res.status, 201);
   assert.ok(!Array.isArray(res.body));
 
@@ -284,7 +280,6 @@ test("PUT /api/issues/:id updates the sent fields and leaves the rest unchanged"
     .put(`/api/issues/${id}`)
     .send({ title: "Updated title", status: "in_progress" });
 
-  // 200 OK with the updated Issue as a single object.
   assert.equal(res.status, 200);
   assert.ok(!Array.isArray(res.body));
 
@@ -374,7 +369,6 @@ test("DELETE /api/issues/:id deletes the issue and returns 204", async () => {
 
   const res = await request(app).delete(`/api/issues/${id}`);
 
-  // 204 No Content with an empty body.
   assert.equal(res.status, 204);
   assert.deepEqual(res.body, {});
 
