@@ -73,7 +73,11 @@ favour the boring, readable option I can defend line by line.
   `fetch()`. Chosen for maximum simplicity and readability, for one deployable
   unit, and for a clean architecture story — the JSON API is the single source of
   truth, used identically by the UI and by `curl`. The trade-off is manual DOM
-  updates, which are fine at this size.
+  updates, which are fine at this size. Frontend is the area I have the least
+  experience in, so for this part I leaned on suggestions from research I did with
+  Claude rather than on prior frontend practice — keeping the plain, frameworkless
+  approach was also what (I hope) enables me to better understand the code, should
+  I need to come back to it later on.
   *At scale:* a component framework (React or Vue) built to static files and
   served from S3 + CloudFront, decoupled from the API.
 - **Deployment — not done, by choice.** A live AWS URL was a "nice-to-have" the
