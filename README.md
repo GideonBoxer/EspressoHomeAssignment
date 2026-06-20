@@ -1,5 +1,12 @@
 # The Trial Issue Log
 
+- [What it does](#what-it-does)
+- [Decisions and why](#decisions-and-why)
+- [Running it](#running-it)
+- [API examples](#api-examples)
+- [Project layout](#project-layout)
+- [Nice-to-haves](#nice-to-haves)
+
 A small end-to-end app for tracking issues found during a clinical trial site
 visit. You can log an issue, edit or resolve it, filter and search the list, and
 see a dashboard of counts by status and severity. Built as a take-home for
