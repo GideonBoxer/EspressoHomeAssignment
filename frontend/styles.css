@@ -1,0 +1,518 @@
+/*
+  styles.css — visual styling for The Trial Issue Log.
+
+  Organised top-to-bottom as: palette variables, base/layout, sidebar, controls,
+  table, buttons, modal. The colours come from the agreed "Claude light mode"
+  palette and live as CSS custom properties on :root so every rule references a
+  named colour (e.g. var(--accent)) instead of repeating hex codes.
+*/
+
+/* ----------------------------- Palette ----------------------------- */
+:root {
+  --bg-page: #f7f2ee; /* warm off-white / parchment — main background */
+  --bg-sidebar: #f0ebe5; /* slightly darker warm beige — sidebar */
+  --bg-card: #ffffff; /* pure white — cards, table, inputs */
+  --bg-code: #f4f0ec; /* warm light gray — subtle fills (e.g. table header) */
+
+  --text: #1a1a1a; /* near-black — primary text */
+  --text-muted: #6b7280; /* cool gray — secondary text */
+
+  --border: #e5e0da; /* warm light gray — borders / dividers */
+  --border-strong: #d9d4ce; /* slightly darker border */
+
+  --accent: #d97757; /* burnt sienna / terracotta — primary actions */
+  --accent-hover: #c5663f;
+
+  --green: #4a7c59; /* confirm / Resolve */
+  --green-hover: #3d6b4a;
+
+  --red: #b85450; /* destructive / Delete */
+  --red-hover: #a04340;
+  --red-soft: #f3e3e2; /* pale red fill for the ghost Delete on hover */
+
+  --disabled: #b8a99a; /* warm greige — disabled controls */
+}
+
+/* ----------------------------- Base ----------------------------- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg-page);
+}
+
+/* The whole app is a two-column grid: a fixed-width sidebar + the page content.
+   100vh so the sidebar spans the full window height. */
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: 100vh;
+}
+
+/* ----------------------------- Sidebar ----------------------------- */
+.sidebar {
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  padding: 20px 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 22px;
+}
+
+.brand-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Nav items look like plain text until hovered or active, like Claude's sidebar. */
+.nav-item {
+  text-align: left;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  padding: 9px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background: var(--border);
+}
+
+.nav-item.is-active {
+  background: var(--bg-card);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ----------------------------- Content / pages ----------------------------- */
+.content {
+  padding: 28px 32px;
+  overflow-y: auto; /* let the page scroll if it grows taller than the window */
+}
+
+/* Only the active page is shown; app.js toggles the is-active class. */
+.page {
+  display: none;
+}
+
+.page.is-active {
+  display: block;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 18px;
+}
+
+.placeholder {
+  color: var(--text-muted);
+}
+
+/* Inline notice banner (import results, errors). Colour set inline by app.js
+   via the .is-error / .is-success modifier classes below. */
+.notice {
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+}
+
+.notice.is-success {
+  background: #e7f0ea;
+  border-color: var(--green);
+  color: var(--green-hover);
+}
+
+.notice.is-error {
+  background: var(--red-soft);
+  border-color: var(--red);
+  color: var(--red-hover);
+}
+
+/* ----------------------------- Controls bar ----------------------------- */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Pushes the search + filters group to the right, leaving Create on the left. */
+.controls-right {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.search,
+.select {
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.search {
+  width: 220px;
+}
+
+.search:focus,
+.select:focus,
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ----------------------------- Table ----------------------------- */
+/* The scroll container caps the visible height to ~10 rows. The header is sticky
+   so it stays visible while the body scrolls. The exact height is a round number
+   chosen to show about ten 44px rows plus the header. */
+.table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+  max-height: 520px;
+}
+
+.issues-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.issues-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-code);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.issues-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+/* No divider under the final row — the container border already closes it off. */
+.issues-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.issues-table tbody tr:hover {
+  background: var(--bg-page);
+}
+
+.actions-col {
+  width: 1%; /* shrink the actions column to its content */
+  white-space: nowrap;
+}
+
+/* The per-row action buttons sit in a tidy row. */
+.row-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 22px 14px;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* Small coloured pills for severity / status, for quick visual scanning. */
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-minor {
+  background: #eef0f2;
+  color: #5b6470;
+}
+.badge-major {
+  background: #fbe9df;
+  color: #b35a35;
+}
+.badge-critical {
+  background: #f4dcda;
+  color: var(--red-hover);
+}
+
+.badge-open {
+  background: #fbe9df;
+  color: #b35a35;
+}
+.badge-in_progress {
+  background: #e6eef6;
+  color: #3b6090;
+}
+.badge-resolved {
+  background: #e7f0ea;
+  color: var(--green-hover);
+}
+
+/* ----------------------------- Below the list ----------------------------- */
+.below-list {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* ----------------------------- Buttons ----------------------------- */
+/* A shared base; each variant only overrides colours. */
+.btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  background: var(--disabled);
+  border-color: var(--disabled);
+  color: #fff;
+  cursor: not-allowed;
+}
+
+/* Primary (Create issue) — terracotta accent. */
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+/* Secondary (Upload CSV) — outlined neutral. */
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn-secondary:hover {
+  background: var(--bg-code);
+}
+
+/* Confirm / Save — green. */
+.btn-confirm {
+  background: var(--green);
+  color: #fff;
+}
+.btn-confirm:hover {
+  background: var(--green-hover);
+}
+
+/* Ghost — neutral text button (Cancel). */
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn-ghost:hover {
+  background: var(--bg-code);
+}
+
+/* Solid danger (the final Delete in the confirm dialog). */
+.btn-danger {
+  background: var(--red);
+  color: #fff;
+}
+.btn-danger:hover {
+  background: var(--red-hover);
+}
+
+/* Small row-action buttons. Compact, and Delete uses the ghost brick-red variant
+   (outlined by default, filled on hover) so a destructive action is not alarming
+   at rest, per the design notes. */
+.btn-row {
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn-row:hover {
+  background: var(--bg-code);
+}
+
+.btn-row.resolve {
+  border-color: var(--green);
+  color: var(--green-hover);
+}
+.btn-row.resolve:hover {
+  background: var(--green);
+  color: #fff;
+}
+
+.btn-row.delete {
+  border-color: var(--red);
+  color: var(--red-hover);
+}
+.btn-row.delete:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+.btn-row:disabled {
+  border-color: var(--border);
+  color: var(--disabled);
+  background: var(--bg-card);
+  cursor: not-allowed;
+}
+
+/* ----------------------------- Modal ----------------------------- */
+/* The native <dialog> handles the backdrop + centering; we style its box and the
+   form inside. ::backdrop dims the page behind an open modal. */
+.modal {
+  border: none;
+  border-radius: 12px;
+  padding: 0;
+  width: 460px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+}
+
+.modal::backdrop {
+  background: rgba(40, 30, 24, 0.35);
+}
+
+.modal-form {
+  padding: 22px 24px 20px;
+}
+
+.modal-title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-text {
+  margin: 0 0 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Stacked form fields. */
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.req {
+  color: var(--accent);
+}
+
+.input {
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+textarea.input {
+  resize: vertical;
+}
+
+/* Severity + status side by side. */
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+.field-row .field {
+  flex: 1;
+}
+
+.form-error {
+  margin: 0 0 14px;
+  color: var(--red-hover);
+  font-size: 13px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* ----------------------------- Row tooltip ----------------------------- */
+/* The hover tooltip that shows an issue's description. position: fixed so we can
+   place it with viewport (cursor) coordinates; pointer-events: none so it never
+   intercepts the mouse and cause flicker. app.js toggles the [hidden] attribute
+   and sets left/top. */
+.tooltip {
+  position: fixed;
+  z-index: 100;
+  max-width: 320px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: var(--text); /* near-black bubble */
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  /* Long descriptions wrap instead of stretching off-screen. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
