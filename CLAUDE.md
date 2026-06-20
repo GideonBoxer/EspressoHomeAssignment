@@ -90,7 +90,7 @@ frontend stay in sync even if built in separate sessions.
 | Done | Method | Path | Purpose | Success |
 | --- | --- | --- | --- | --- |
 | ✅ | `GET` | `/api/issues` | list (see query params) | `200` → `Issue[]` |
-|  | `POST` | `/api/issues` | create | `201` → `Issue` |
+| ✅ | `POST` | `/api/issues` | create | `201` → `Issue` |
 | ✅ | `GET` | `/api/issues/:id` | detail | `200` → `Issue` / `404` |
 |  | `PUT` | `/api/issues/:id` | update (partial allowed); "Resolve" = set `status:"resolved"` | `200` → `Issue` / `404` |
 |  | `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
