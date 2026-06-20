@@ -5,11 +5,11 @@
 // Keeping the two separate means tests can import the app and exercise routes
 // without actually opening a network port.
 //
-// For now the app is intentionally tiny: a single proof-of-life route so we can
-// confirm the server runs and responds in a browser. The real /api routes and
-// the static frontend will be mounted here in later steps.
+// The /api routes are mounted below; the static frontend will be added here in a
+// later step.
 
 const express = require("express");
+const issuesRouter = require("./routes/issues");
 
 const app = express();
 
@@ -18,5 +18,10 @@ const app = express();
 app.get("/", (req, res) => {
   res.send("Trial Issue Log — server is running.");
 });
+
+// API routes. Each resource gets its own router file under routes/ and is
+// mounted here under its /api base path. The issues router handles everything
+// below /api/issues (e.g. GET /api/issues for the list).
+app.use("/api/issues", issuesRouter);
 
 module.exports = app;
