@@ -12,14 +12,18 @@
 const express = require("express");
 const db = require("../db"); // the one shared SQLite connection opened in db.js
 
-const router = express.Router();
+// Shared validation helpers and the enum value lists. Each helper returns an
+// error-message string when the value is invalid, or null when it is fine — so a
+// route validates a field by calling a helper and bailing with 400 on a non-null
+// result. See server/validation.js.
+const {
+  STATUSES,
+  SEVERITIES,
+  requireNonEmptyString,
+  validateEnum,
+} = require("../validation");
 
-// The allowed enum values, straight from the API contract. Kept here as plain
-// arrays so we can both validate incoming filter values and build a helpful
-// error message. (These will likely move to a shared validation.js later, once
-// the create/update routes need the same lists.)
-const STATUSES = ["open", "in_progress", "resolved"];
-const SEVERITIES = ["minor", "major", "critical"];
+const router = express.Router();
 
 // GET /api/issues — list issues, with optional search / filter / sort.
 //
@@ -36,16 +40,15 @@ router.get("/", (req, res) => {
 
   // Validate the enum filters up front. An unknown value almost certainly means
   // a client bug or a typo, so we fail loudly with 400 rather than silently
-  // returning an empty list (which would look like "no issues").
-  if (status !== undefined && !STATUSES.includes(status)) {
-    return res
-      .status(400)
-      .json({ error: `Invalid status: must be one of ${STATUSES.join(", ")}` });
+  // returning an empty list (which would look like "no issues"). validateEnum
+  // treats an absent (undefined) filter as valid, so omitting a filter is fine.
+  const statusError = validateEnum(status, STATUSES, "status");
+  if (statusError !== null) {
+    return res.status(400).json({ error: statusError });
   }
-  if (severity !== undefined && !SEVERITIES.includes(severity)) {
-    return res
-      .status(400)
-      .json({ error: `Invalid severity: must be one of ${SEVERITIES.join(", ")}` });
+  const severityError = validateEnum(severity, SEVERITIES, "severity");
+  if (severityError !== null) {
+    return res.status(400).json({ error: severityError });
   }
 
   // Build the WHERE clause one condition at a time. We collect SQL fragments in
@@ -107,39 +110,35 @@ router.post("/", (req, res) => {
 
   // title — required, must be a non-empty string (after trimming whitespace, so
   // "   " does not count as a real title).
-  if (typeof title !== "string" || title.trim() === "") {
-    return res
-      .status(400)
-      .json({ error: "title is required and must be a non-empty string" });
+  const titleError = requireNonEmptyString(title, "title");
+  if (titleError !== null) {
+    return res.status(400).json({ error: titleError });
   }
 
   // description — same rule as title.
-  if (typeof description !== "string" || description.trim() === "") {
-    return res
-      .status(400)
-      .json({ error: "description is required and must be a non-empty string" });
+  const descriptionError = requireNonEmptyString(description, "description");
+  if (descriptionError !== null) {
+    return res.status(400).json({ error: descriptionError });
   }
 
   // site — optional. If the client sends it, it must be a string; if omitted we
-  // store null (the column is nullable).
+  // store null (the column is nullable). This "string if present, empty allowed"
+  // rule is a one-off, so it stays inline rather than becoming a shared helper.
   if (site !== undefined && typeof site !== "string") {
     return res.status(400).json({ error: "site must be a string" });
   }
 
-  // severity — optional on create; defaults to "minor". If provided it must be a
-  // valid enum value.
-  if (severity !== undefined && !SEVERITIES.includes(severity)) {
-    return res
-      .status(400)
-      .json({ error: `Invalid severity: must be one of ${SEVERITIES.join(", ")}` });
+  // severity — optional on create; defaults to "minor" below. validateEnum lets
+  // an omitted value through and only rejects a present-but-unknown one.
+  const severityError = validateEnum(severity, SEVERITIES, "severity");
+  if (severityError !== null) {
+    return res.status(400).json({ error: severityError });
   }
 
-  // status — optional on create; defaults to "open". If provided it must be a
-  // valid enum value.
-  if (status !== undefined && !STATUSES.includes(status)) {
-    return res
-      .status(400)
-      .json({ error: `Invalid status: must be one of ${STATUSES.join(", ")}` });
+  // status — optional on create; defaults to "open" below (same rule as severity).
+  const statusError = validateEnum(status, STATUSES, "status");
+  if (statusError !== null) {
+    return res.status(400).json({ error: statusError });
   }
 
   // Server-controlled fields. createdAt and updatedAt are identical on create;
