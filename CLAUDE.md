@@ -23,7 +23,7 @@ The author of this submission (the person who will defend it in the interview) i
   boring, obvious way to do something.
 - **Good, clear documentation.** Comment the *why*, not just the *what*, so the code is
   easy to follow and explain.
-- **Small files, one clear job each.** Easy to read top-to-bottom and explain.
+- **One clear job per file.** Easy to read top-to-bottom and explain.
 - This is part of why the stack leans toward **Express** (the most ubiquitous,
   best-documented, least "magic" Node framework) — chosen partly *for learnability*.
 - The author must be able to **read and defend every line**.
@@ -291,25 +291,3 @@ here with the reasoning, so it can go into the README and be defended in the int
   containerize the app and run it on AWS ECS (behind a load balancer), with the DB on
   RDS and the static frontend on S3 + CloudFront. Gives repeatable builds, horizontal
   scaling, and zero-downtime deploys once the product grows.
-
-## Current status
-
-- [x] Read & understood the assignment
-- [x] Created this CLAUDE.md
-- [x] Stack decisions (Express · SQLite · plain HTML+JS · EC2; see Decisions log)
-- [x] GitHub repo set up & connected (CLAUDE.md + assignment PDF on `main`)
-- [x] Dev environment — Node 24.17.0 LTS (via winget); `better-sqlite3` installed &
-  verified on Windows (prebuilt binary, no compiler needed)
-- [x] Database layer — `db/schema.sql` (single `issues` table), `db/README.md`
-  (schema description + scale story), `server/db.js` (opens DB + applies schema).
-  Verified: creates `db/issues.db` with the `issues` table; insert/read round-trip
-  works in the Node REPL.
-- [x] Minimal server — `server/app.js` (Express app + `GET /` health route) and
-  `server/server.js` (entry point: opens the DB on boot, listens on `PORT`). `npm start`
-  serves http://localhost:3000 and logs the DB row count. Express added as a dependency.
-- [x] Backend API — `/api` routes + validation. Done: issues CRUD, `/api/dashboard`,
-  `/api/import` (raw `text/csv` body; preserves CSV `createdAt`; all-or-nothing;
-  covered by `tests/import.test.js`).
-- [ ] Frontend UI
-- [ ] README
-- [ ] AWS deployment
