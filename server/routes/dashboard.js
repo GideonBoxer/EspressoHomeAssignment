@@ -15,9 +15,12 @@ const router = express.Router();
 
 // GET /api/dashboard — counts of issues by status and by severity.
 //
-// Response shape (from the contract):
-//   { "byStatus":   { "open": N, "in_progress": N, "resolved": N },
-//     "bySeverity": { "minor": N, "major": N, "critical": N } }
+// Input:
+//   none — no params, no body
+// Output (from the contract):
+//   200 → { "byStatus":   { "open": N, "in_progress": N, "resolved": N },
+//           "bySeverity": { "minor": N, "major": N, "critical": N } }
+//   Every enum key is always present; its count is 0 when no issue has that value.
 //
 // The two groups are the SAME issues sliced two different ways, so each group sums to
 // the total number of issues. There is no input to validate (no params, no body), so
