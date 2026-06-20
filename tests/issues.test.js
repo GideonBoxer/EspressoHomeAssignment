@@ -158,3 +158,106 @@ test("GET /api/issues/:id returns 404 for a non-numeric id", async () => {
   assert.equal(res.status, 404);
   assert.equal(typeof res.body.error, "string");
 });
+
+// --- POST /api/issues (create) ---------------------------------------------
+//
+// These tests run after the GET tests above. Node's test runner executes the
+// tests in this file in definition order, so the seeded-count assertions (which
+// expect exactly 2 rows) all run BEFORE the creates below add any rows — making
+// it safe to append here. The success test still avoids hardcoding a total by
+// measuring the list length before and after, and asserting it grew by one.
+
+test("POST /api/issues creates an issue and returns 201", async () => {
+  // Count the rows before, so we can assert the create added exactly one without
+  // depending on how many rows other tests have inserted.
+  const before = await request(app).get("/api/issues");
+  const countBefore = before.body.length;
+
+  // A valid body. We deliberately OMIT `status` so the route applies its default
+  // ("open"); `severity` is sent explicitly so we can assert it round-trips.
+  const payload = {
+    title: "Missing consent form",
+    description: "Consent form not in file for patient 003",
+    site: "Site-101",
+    severity: "major",
+  };
+
+  const res = await request(app).post("/api/issues").send(payload);
+
+  // 201 Created with the new Issue as a single object.
+  assert.equal(res.status, 201);
+  assert.ok(!Array.isArray(res.body));
+
+  // Server-assigned id, and the fields we sent come back unchanged.
+  assert.equal(typeof res.body.id, "number");
+  assert.equal(res.body.title, payload.title);
+  assert.equal(res.body.description, payload.description);
+  assert.equal(res.body.site, payload.site);
+  assert.equal(res.body.severity, payload.severity);
+
+  // Defaults applied for the omitted field, and timestamps set by the server.
+  assert.equal(res.body.status, "open");
+  assert.equal(typeof res.body.createdAt, "string");
+  assert.ok(res.body.createdAt.length > 0);
+  assert.equal(res.body.updatedAt, res.body.createdAt); // equal on create
+
+  // It was really persisted: fetching it by id returns the same issue...
+  const fetched = await request(app).get(`/api/issues/${res.body.id}`);
+  assert.equal(fetched.status, 200);
+  assert.equal(fetched.body.id, res.body.id);
+  assert.equal(fetched.body.title, payload.title);
+
+  // ...and the list grew by exactly one.
+  const after = await request(app).get("/api/issues");
+  assert.equal(after.body.length, countBefore + 1);
+});
+
+// Failure cases. A request is just data, so an invalid request is as easy to
+// build as a valid one: we send a body that breaks one validation rule and
+// assert the route rejects it with 400 + the contract's { error } shape. Each
+// rule gets its own small test so a failure points at exactly what broke.
+
+test("POST /api/issues rejects a missing title with 400", async () => {
+  const res = await request(app)
+    .post("/api/issues")
+    .send({ description: "no title here" });
+
+  assert.equal(res.status, 400);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("POST /api/issues rejects a missing description with 400", async () => {
+  const res = await request(app)
+    .post("/api/issues")
+    .send({ title: "no description here" });
+
+  assert.equal(res.status, 400);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("POST /api/issues rejects a blank (whitespace-only) title with 400", async () => {
+  const res = await request(app)
+    .post("/api/issues")
+    .send({ title: "   ", description: "valid" });
+
+  assert.equal(res.status, 400);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("POST /api/issues rejects an invalid severity with 400", async () => {
+  const res = await request(app)
+    .post("/api/issues")
+    .send({ title: "valid", description: "valid", severity: "huge" });
+
+  assert.equal(res.status, 400);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("POST /api/issues rejects an invalid status with 400", async () => {
+  const res = await request(app)
+    .post("/api/issues")
+    .send({ title: "valid", description: "valid", status: "banana" });
+
+  assert.equal(res.status, 400);
+  assert.equal(typeof res.body.error, "string");
+});

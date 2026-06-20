@@ -13,6 +13,14 @@ const issuesRouter = require("./routes/issues");
 
 const app = express();
 
+// Parse JSON request bodies. This middleware reads the raw body of any request
+// with a JSON Content-Type and populates `req.body` with the parsed object, which
+// the create/update routes rely on. Without it, `req.body` would be undefined.
+// It must run before the routes are mounted so the parsed body is ready by the
+// time a route handler runs. (The GET routes don't use a body, so they're
+// unaffected.)
+app.use(express.json());
+
 // Landing / health-check route. Visiting http://localhost:3000/ returns this
 // plain text, which proves the server is up and handling requests.
 app.get("/", (req, res) => {

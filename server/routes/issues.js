@@ -88,6 +88,93 @@ router.get("/", (req, res) => {
   res.json(issues);
 });
 
+// POST /api/issues — create a new issue.
+//
+// The client sends a JSON body (parsed into req.body by the express.json()
+// middleware in app.js). We validate it, let the server fill in the fields the
+// client must NOT control (id and the timestamps), insert the row, then return
+// the created issue with 201.
+//
+// Validation strategy: we check the input here and return a clean 400 with an
+// { error } message on the first problem. The database's NOT NULL / CHECK
+// constraints are a backstop, but catching bad input in the route gives the
+// client a helpful message instead of a raw database exception.
+router.post("/", (req, res) => {
+  // Guard against a completely missing body (e.g. no JSON sent at all), so the
+  // field reads below never throw on `undefined`.
+  const body = req.body || {};
+  const { title, description, site, severity, status } = body;
+
+  // title — required, must be a non-empty string (after trimming whitespace, so
+  // "   " does not count as a real title).
+  if (typeof title !== "string" || title.trim() === "") {
+    return res
+      .status(400)
+      .json({ error: "title is required and must be a non-empty string" });
+  }
+
+  // description — same rule as title.
+  if (typeof description !== "string" || description.trim() === "") {
+    return res
+      .status(400)
+      .json({ error: "description is required and must be a non-empty string" });
+  }
+
+  // site — optional. If the client sends it, it must be a string; if omitted we
+  // store null (the column is nullable).
+  if (site !== undefined && typeof site !== "string") {
+    return res.status(400).json({ error: "site must be a string" });
+  }
+
+  // severity — optional on create; defaults to "minor". If provided it must be a
+  // valid enum value.
+  if (severity !== undefined && !SEVERITIES.includes(severity)) {
+    return res
+      .status(400)
+      .json({ error: `Invalid severity: must be one of ${SEVERITIES.join(", ")}` });
+  }
+
+  // status — optional on create; defaults to "open". If provided it must be a
+  // valid enum value.
+  if (status !== undefined && !STATUSES.includes(status)) {
+    return res
+      .status(400)
+      .json({ error: `Invalid status: must be one of ${STATUSES.join(", ")}` });
+  }
+
+  // Server-controlled fields. createdAt and updatedAt are identical on create;
+  // updatedAt will diverge once the issue is edited. ISO-8601 strings sort
+  // correctly as text, which is what the list route's ORDER BY relies on.
+  const now = new Date().toISOString();
+
+  // Insert with named bind parameters (never string concatenation), applying the
+  // contract's defaults for any omitted optional fields.
+  const info = db
+    .prepare(
+      `INSERT INTO issues (title, description, site, severity, status, createdAt, updatedAt)
+       VALUES (@title, @description, @site, @severity, @status, @createdAt, @updatedAt)`
+    )
+    .run({
+      title,
+      description,
+      site: site !== undefined ? site : null,
+      severity: severity !== undefined ? severity : "minor",
+      status: status !== undefined ? status : "open",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+  // Read the row back by its new id and return that, rather than echoing the
+  // input. This guarantees the response is exactly what was stored (including the
+  // server-assigned id and any defaults that were applied) — the same approach as
+  // the GET-by-id route below.
+  const created = db
+    .prepare("SELECT * FROM issues WHERE id = @id")
+    .get({ id: info.lastInsertRowid });
+
+  res.status(201).json(created);
+});
+
 // GET /api/issues/:id — fetch one issue by its id (the "detail" / read-one route).
 //
 // Three things make this different from the list route above:
