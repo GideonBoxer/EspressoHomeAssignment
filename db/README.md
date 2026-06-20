@@ -80,5 +80,14 @@ When this grows beyond the assignment, the migration story is:
    columns become real `timestamptz`.
 2. **Promote `site` to its own table** once sites gain attributes (address,
    coordinator, active flag), with `issues.site_id` as a foreign key.
-3. **Add `users` and an audit/`history` table** to record who changed what and
+3. **Promote the `severity` / `status` enums to lookup tables.** Today the allowed
+   values live in code — a `CHECK` constraint in `schema.sql` plus the matching
+   lists in `server/validation.js` — which is the right call at this scope (no extra
+   tables or joins for two short, fixed sets). If the enums need to grow into managed
+   reference data (adding values without a code change/migration, storing per-value
+   attributes like a label, sort order, or colour, or enforcing them across many
+   tables), they'd move into their own `severities` / `statuses` tables. The
+   `issues.severity` / `issues.status` columns would then become foreign keys to
+   those tables' ids instead of free `TEXT` constrained by a `CHECK`.
+4. **Add `users` and an audit/`history` table** to record who changed what and
    when, once the app has real accounts.
