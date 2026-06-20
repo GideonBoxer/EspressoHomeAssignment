@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<!--
+  index.html — the single page for The Trial Issue Log.
+
+  There is only one HTML file. It holds BOTH "pages" (Issues and Dashboard) as
+  separate <section>s and shows one at a time by toggling a CSS class from app.js —
+  so navigating between them never reloads the page. The two modal dialogs (the
+  Create/Edit form and the Delete confirmation) also live here, hidden until opened.
+
+  The frontend is plain HTML + CSS + vanilla JS with no build step: the browser loads
+  this file, styles.css, and app.js directly. app.js talks to the same-origin JSON API
+  under /api.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Trial Issue Log</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- App shell: a fixed sidebar on the left, the active page on the right. -->
+    <div class="app">
+      <!-- Sidebar navigation (Claude-style). Each button switches the visible page.
+           data-page links a nav button to the <section> with the matching id. -->
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-dot"></span>
+          <span class="brand-name">Trial Issue Log</span>
+        </div>
+        <nav class="nav">
+          <button class="nav-item is-active" data-page="issues">Issues</button>
+          <button class="nav-item" data-page="dashboard">Dashboard</button>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <!-- A small inline banner for success/error messages (e.g. an import count
+             or a validation error from the API). Hidden until app.js fills it in. -->
+        <div id="notice" class="notice" hidden></div>
+
+        <!-- ===================== ISSUES PAGE ===================== -->
+        <section id="page-issues" class="page is-active">
+          <h1 class="page-title">Issues</h1>
+
+          <!-- Controls bar: Create on the left; search + filters on the right. -->
+          <div class="controls">
+            <button id="create-issue-btn" class="btn btn-primary">
+              Create issue
+            </button>
+
+            <div class="controls-right">
+              <input
+                id="search-input"
+                class="search"
+                type="text"
+                placeholder="Search title…"
+                autocomplete="off"
+              />
+              <!-- The empty-value option means "no filter" (all statuses). -->
+              <select id="status-filter" class="select">
+                <option value="">All statuses</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In progress</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <select id="severity-filter" class="select">
+                <option value="">All severities</option>
+                <option value="minor">Minor</option>
+                <option value="major">Major</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- The table lives in a scroll container: about 10 rows are visible and the
+               body scrolls past that (no pagination). The header stays put (sticky). -->
+          <div class="table-wrap">
+            <table class="issues-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Site</th>
+                  <th>Severity</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th class="actions-col">Actions</th>
+                </tr>
+              </thead>
+              <!-- app.js fills this in from GET /api/issues. -->
+              <tbody id="issues-tbody"></tbody>
+            </table>
+            <!-- Shown by app.js when the list comes back empty. -->
+            <p id="empty-issues" class="empty" hidden>No issues to show.</p>
+          </div>
+
+          <!-- Upload CSV, below the list, right-aligned. The real file picker is a
+               hidden <input>; the visible button forwards the click to it. -->
+          <div class="below-list">
+            <button id="upload-csv-btn" class="btn btn-secondary">Upload CSV</button>
+            <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden />
+          </div>
+        </section>
+
+        <!-- =================== DASHBOARD PAGE =================== -->
+        <!-- Placeholder only for now: the nav target exists so the shell is complete;
+             the counts/chips wired to GET /api/dashboard are a separate follow-up. -->
+        <section id="page-dashboard" class="page">
+          <h1 class="page-title">Dashboard</h1>
+          <p class="placeholder">Dashboard coming soon.</p>
+        </section>
+      </main>
+    </div>
+
+    <!-- ============ CREATE / EDIT MODAL ============ -->
+    <!-- One <dialog> reused for both Create (empty) and Edit (pre-filled). app.js
+         sets the title, fills or clears the fields, and decides POST vs PUT. The
+         native <dialog> element gives us a built-in backdrop and Esc-to-close. -->
+    <dialog id="issue-dialog" class="modal">
+      <form id="issue-form" method="dialog" class="modal-form">
+        <h2 id="issue-dialog-title" class="modal-title">Create issue</h2>
+
+        <!-- Hidden field: holds the id of the issue being edited (empty on create),
+             so the submit handler knows whether to POST a new one or PUT an update. -->
+        <input type="hidden" id="issue-id" />
+
+        <label class="field">
+          <span class="field-label">Title <span class="req">*</span></span>
+          <input id="field-title" class="input" type="text" required />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Description <span class="req">*</span></span>
+          <textarea id="field-description" class="input" rows="3" required></textarea>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Site</span>
+          <input id="field-site" class="input" type="text" placeholder="e.g. Site-101" />
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">Severity</span>
+            <select id="field-severity" class="input">
+              <option value="minor">Minor</option>
+              <option value="major">Major</option>
+              <option value="critical">Critical</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">Status</span>
+            <select id="field-status" class="input">
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Inline spot for a validation error returned by the API on submit. -->
+        <p id="issue-form-error" class="form-error" hidden></p>
+
+        <div class="modal-actions">
+          <button type="button" id="issue-cancel-btn" class="btn btn-ghost">
+            Cancel
+          </button>
+          <button type="submit" id="issue-save-btn" class="btn btn-confirm">
+            Save
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- ============ DELETE CONFIRMATION MODAL ============ -->
+    <dialog id="delete-dialog" class="modal">
+      <div class="modal-form">
+        <h2 class="modal-title">Delete this issue?</h2>
+        <p class="modal-text">
+          This action cannot be undone. The issue will be permanently removed.
+        </p>
+        <div class="modal-actions">
+          <button type="button" id="delete-cancel-btn" class="btn btn-ghost">
+            Cancel
+          </button>
+          <button type="button" id="delete-confirm-btn" class="btn btn-danger">
+            Delete
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Floating tooltip that shows an issue's description while hovering its table
+         row. There is one shared element (not one per row); app.js fills in the text
+         and positions it under the cursor. pointer-events:none (in CSS) means it never
+         sits "between" the cursor and the row, so hovering stays smooth. -->
+    <div id="row-tooltip" class="tooltip" hidden></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

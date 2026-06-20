@@ -5,9 +5,11 @@
 // Keeping the two separate means tests can import the app and exercise routes
 // without actually opening a network port.
 //
-// The /api routes are mounted below; the static frontend will be added here in a
-// later step.
+// The app does two things: it serves the JSON API under /api, and it serves the
+// static frontend (plain HTML/CSS/JS) for everything else. One server, one origin —
+// so the frontend can call the API with relative /api paths and we need no CORS.
 
+const path = require("path");
 const express = require("express");
 const issuesRouter = require("./routes/issues");
 const dashboardRouter = require("./routes/dashboard");
@@ -30,15 +32,12 @@ app.use(express.json());
 // parsers do not interfere with each other.
 app.use(express.text({ type: "text/csv" }));
 
-// Landing / health-check route. Visiting http://localhost:3000/ returns this
-// plain text, which proves the server is up and handling requests.
-app.get("/", (req, res) => {
-  res.send("Trial Issue Log — server is running.");
-});
-
 // API routes. Each resource gets its own router file under routes/ and is
 // mounted here under its /api base path. The issues router handles everything
 // below /api/issues (e.g. GET /api/issues for the list).
+//
+// These are mounted BEFORE the static frontend below so that an /api/... request
+// is always handled by its router and never mistaken for a static file.
 app.use("/api/issues", issuesRouter);
 
 // Dashboard summary. Its own router (counts, not CRUD) mounted at its own top-level
@@ -48,5 +47,14 @@ app.use("/api/dashboard", dashboardRouter);
 // CSV import. Its own router mounted at its own top-level /api path (it is NOT under
 // /api/issues). Accepts a raw text/csv body and bulk-creates issues from it.
 app.use("/api/import", importRouter);
+
+// Static frontend. Everything that is not an /api route is served as a plain file
+// from the frontend/ directory (index.html, styles.css, app.js). express.static
+// serves "/" as frontend/index.html automatically, so visiting http://localhost:3000/
+// loads the UI. The frontend then talks to the API above via relative /api paths.
+//
+// __dirname is this file's folder (server/), so we go up one level to the repo root
+// and into frontend/.
+app.use(express.static(path.join(__dirname, "..", "frontend")));
 
 module.exports = app;
