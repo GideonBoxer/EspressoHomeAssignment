@@ -37,7 +37,7 @@ The author of this submission (the person who will defend it in the interview) i
 1. `git checkout main && git pull origin main`
 2. `git checkout -b <feature-branch>`
 3. build + commit
-4. `git push -u origin <feature-branch>`, then open a PR from the compare link
+4. `git push -u origin <feature-branch>`, then provide a link to create a PR in the browser
 5. After merge: `git checkout main && git pull`, delete the merged local branch
 
 ## What the app must let a user do
@@ -93,7 +93,7 @@ frontend stay in sync even if built in separate sessions.
 | ✅ | `POST` | `/api/issues` | create | `201` → `Issue` |
 | ✅ | `GET` | `/api/issues/:id` | detail | `200` → `Issue` / `404` |
 | ✅ | `PUT` | `/api/issues/:id` | update (partial allowed); "Resolve" = set `status:"resolved"` | `200` → `Issue` / `404` |
-|  | `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
+| ✅ | `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
 |  | `GET` | `/api/dashboard` | counts | `200` (shape below) |
 |  | `POST` | `/api/import` | ingest CSV (file upload or raw CSV body) | `200` → `{ "imported": N }` |
 
@@ -109,6 +109,10 @@ frontend stay in sync even if built in separate sessions.
 **Validation** (else `400`): `title` & `description` required non-empty strings;
 `severity`/`status` must be in their enums (on create, default `severity:"minor"`,
 `status:"open"`); `site` optional string. Server sets `id`, `createdAt`, `updatedAt`.
+These checks live in **`server/validation.js`** — shared helpers
+(`requireNonEmptyString`, `validateEnum`) plus the enum value lists (`STATUSES`,
+`SEVERITIES`), each returning an error-message string (or `null` when valid) so the
+routes stay a short "check, then bail with 400" sequence.
 
 **Error format** (all 4xx/5xx): `{ "error": "<message>" }` (optionally a `details`
 array for field-level validation errors).

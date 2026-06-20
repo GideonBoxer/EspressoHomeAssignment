@@ -359,3 +359,42 @@ test("PUT /api/issues/:id rejects blanking out a required field with 400", async
   assert.equal(res.status, 400);
   assert.equal(typeof res.body.error, "string");
 });
+
+// --- DELETE /api/issues/:id (delete) ----------------------------------------
+//
+// Like the PUT tests, each test creates its own issue via POST and operates on
+// that returned id, so it never depends on the seeded rows.
+
+test("DELETE /api/issues/:id deletes the issue and returns 204", async () => {
+  // Create a known issue to delete.
+  const created = await request(app)
+    .post("/api/issues")
+    .send({ title: "To be deleted", description: "A doomed issue" });
+  const { id } = created.body;
+
+  const res = await request(app).delete(`/api/issues/${id}`);
+
+  // 204 No Content with an empty body.
+  assert.equal(res.status, 204);
+  assert.deepEqual(res.body, {});
+
+  // It really went away: fetching it by id now returns 404.
+  const fetched = await request(app).get(`/api/issues/${id}`);
+  assert.equal(fetched.status, 404);
+});
+
+test("DELETE /api/issues/:id returns 404 for an id that doesn't exist", async () => {
+  const res = await request(app).delete("/api/issues/99999");
+
+  assert.equal(res.status, 404);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("DELETE /api/issues/:id returns 404 for a non-numeric id", async () => {
+  // The id column is an integer, so a non-numeric value like "abc" matches no
+  // row and falls through to the same 404 as a missing id (mirrors GET /:id).
+  const res = await request(app).delete("/api/issues/abc");
+
+  assert.equal(res.status, 404);
+  assert.equal(typeof res.body.error, "string");
+});

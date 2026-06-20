@@ -303,4 +303,29 @@ router.put("/:id", (req, res) => {
   res.json(updated);
 });
 
+// DELETE /api/issues/:id — delete one issue.
+//
+// Per the contract: 204 (No Content) on success, 404 if no such issue.
+// better-sqlite3's .run() returns an info object whose `.changes` is the number
+// of rows affected. 0 means nothing matched that id — the same 404 signal the
+// GET/PUT routes get from an `undefined` row — so we branch on that. A non-numeric
+// id (e.g. /api/issues/abc) simply matches no row and falls through to 404, exactly
+// like GET /:id. On success there is no body to return, so we send 204 and end.
+//
+// Unlike PUT, we do not load the row first: delete only needs to know whether a row
+// existed, which `.changes` reports directly — one query instead of two.
+router.delete("/:id", (req, res) => {
+  const info = db
+    .prepare("DELETE FROM issues WHERE id = @id")
+    .run({ id: req.params.id });
+
+  if (info.changes === 0) {
+    return res
+      .status(404)
+      .json({ error: `No issue found with id ${req.params.id}` });
+  }
+
+  res.status(204).end();
+});
+
 module.exports = router;
