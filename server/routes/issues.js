@@ -26,11 +26,14 @@ const router = express.Router();
 
 // GET /api/issues — list issues, with optional search / filter / sort.
 //
-// Query params (all optional, from the contract):
-//   search    — case-insensitive substring match on `title`
-//   status    — exact match, must be one of STATUSES
-//   severity  — exact match, must be one of SEVERITIES
-//   sort      — only `createdAt:asc` / `createdAt:desc` (default: createdAt:desc)
+// Input (query params, all optional, from the contract):
+//   search    (string)       — case-insensitive substring match on `title`
+//   status    (string enum)  — exact match, one of open|in_progress|resolved
+//   severity  (string enum)  — exact match, one of minor|major|critical
+//   sort      (string enum)  — createdAt:asc | createdAt:desc (default: createdAt:desc)
+// Output:
+//   200 → Issue[]            — JSON array (empty [] when nothing matches)
+//   400 → { error }          — a status/severity filter that is not a valid enum value
 //
 // The `issues` table columns line up exactly with the contract's Issue JSON
 // shape, so each row is sent to the client as-is with no field mapping.
@@ -88,6 +91,17 @@ router.get("/", (req, res) => {
 });
 
 // POST /api/issues — create a new issue.
+//
+// Input (JSON body):
+//   title        (string, required)            — non-empty
+//   description  (string, required)            — non-empty
+//   site         (string, optional)            — stored null when omitted
+//   severity     (string enum, optional)       — minor|major|critical (default: minor)
+//   status       (string enum, optional)       — open|in_progress|resolved (default: open)
+//   (server sets id (integer) and createdAt/updatedAt (ISO-8601 string) — client must NOT send these)
+// Output:
+//   201 → Issue                                — the created row, read back from the DB
+//   400 → { error }                            — a field failed validation
 //
 // The client sends a JSON body (parsed into req.body by the express.json()
 // middleware in app.js). We validate it, let the server fill in the fields the
@@ -171,6 +185,12 @@ router.post("/", (req, res) => {
 
 // GET /api/issues/:id — fetch one issue by its id (the "detail" / read-one route).
 //
+// Input:
+//   id  (integer, path param)  — the issue's id from the URL
+// Output:
+//   200 → Issue                — the matching row
+//   404 → { error }            — no issue with that id
+//
 // Three things make this different from the list route above:
 //   1. The id comes from the URL PATH (req.params.id), not the query string.
 //   2. It returns a single Issue OBJECT, not an array.
@@ -200,6 +220,20 @@ router.get("/:id", (req, res) => {
 });
 
 // PUT /api/issues/:id — update an existing issue (the "edit" / "resolve" route).
+//
+// Input:
+//   id  (integer, path param)  — the issue's id from the URL
+//   JSON body — any SUBSET of the mutable fields (all optional on update):
+//     title        (string)       — non-empty if sent
+//     description  (string)       — non-empty if sent
+//     site         (string)
+//     severity     (string enum)  — minor|major|critical
+//     status       (string enum)  — open|in_progress|resolved ("Resolve" = { status: "resolved" })
+//   (omitted fields keep their current value; id and createdAt are never changed)
+// Output:
+//   200 → Issue                — the updated row, read back from the DB
+//   404 → { error }            — no issue with that id
+//   400 → { error }            — a sent field failed validation
 //
 // Per the contract a PUT may be PARTIAL: the client sends only the fields it wants
 // to change, and any field it omits keeps its current value. ("Resolve" is just a
@@ -298,6 +332,12 @@ router.put("/:id", (req, res) => {
 });
 
 // DELETE /api/issues/:id — delete one issue.
+//
+// Input:
+//   id  (integer, path param)  — the issue's id from the URL
+// Output:
+//   204                        — deleted, no body
+//   404 → { error }            — no issue with that id
 //
 // Per the contract: 204 (No Content) on success, 404 if no such issue.
 // better-sqlite3's .run() returns an info object whose `.changes` is the number

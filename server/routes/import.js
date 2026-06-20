@@ -40,8 +40,20 @@ const router = express.Router();
 
 // POST /api/import — import many issues from a CSV body.
 //
-// Success: 200 { "imported": N }. Any problem (empty body, unparseable CSV, or a row
-// that fails validation) returns 400 { "error": "..." } and imports nothing.
+// Input:
+//   request body — raw CSV text (string), sent with Content-Type: text/csv.
+//   Header row: title,description,site,severity,status,createdAt. Per-column types
+//   match the create body:
+//     title        (string, required)       — non-empty
+//     description  (string, required)       — non-empty
+//     site         (string, optional)       — blank cell → null
+//     severity     (string enum, optional)  — minor|major|critical (blank → minor)
+//     status       (string enum, optional)  — open|in_progress|resolved (blank → open)
+//     createdAt    (ISO-8601 string)        — preserved from the CSV (blank → now)
+// Output:
+//   200 → { "imported": N }   — N rows inserted (all-or-nothing, inside one transaction)
+//   400 → { "error": ... }    — empty body, unparseable CSV, or any invalid row;
+//                               imports nothing in that case
 router.post("/", (req, res) => {
   // Guard the body. The express.text() middleware sets req.body to the raw string for a
   // text/csv request; for anything else it may be an object or undefined. We only accept
