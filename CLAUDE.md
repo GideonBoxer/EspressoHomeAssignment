@@ -87,15 +87,15 @@ frontend stay in sync even if built in separate sessions.
 ```
 
 **Endpoints:**
-| Method | Path | Purpose | Success |
-| --- | --- | --- | --- |
-| `GET` | `/api/issues` | list (see query params) | `200` → `Issue[]` |
-| `POST` | `/api/issues` | create | `201` → `Issue` |
-| `GET` | `/api/issues/:id` | detail | `200` → `Issue` / `404` |
-| `PUT` | `/api/issues/:id` | update (partial allowed); "Resolve" = set `status:"resolved"` | `200` → `Issue` / `404` |
-| `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
-| `GET` | `/api/dashboard` | counts | `200` (shape below) |
-| `POST` | `/api/import` | ingest CSV (file upload or raw CSV body) | `200` → `{ "imported": N }` |
+| Done | Method | Path | Purpose | Success |
+| --- | --- | --- | --- | --- |
+| ✅ | `GET` | `/api/issues` | list (see query params) | `200` → `Issue[]` |
+|  | `POST` | `/api/issues` | create | `201` → `Issue` |
+| ✅ | `GET` | `/api/issues/:id` | detail | `200` → `Issue` / `404` |
+|  | `PUT` | `/api/issues/:id` | update (partial allowed); "Resolve" = set `status:"resolved"` | `200` → `Issue` / `404` |
+|  | `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
+|  | `GET` | `/api/dashboard` | counts | `200` (shape below) |
+|  | `POST` | `/api/import` | ingest CSV (file upload or raw CSV body) | `200` → `{ "imported": N }` |
 
 **List query params** (all optional): `search` (case-insensitive substring on `title`),
 `status` (enum), `severity` (enum), `sort` (default `createdAt:desc`).

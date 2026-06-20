@@ -88,4 +88,35 @@ router.get("/", (req, res) => {
   res.json(issues);
 });
 
+// GET /api/issues/:id — fetch one issue by its id (the "detail" / read-one route).
+//
+// Three things make this different from the list route above:
+//   1. The id comes from the URL PATH (req.params.id), not the query string.
+//   2. It returns a single Issue OBJECT, not an array.
+//   3. A missing id is an error (404), whereas an empty filter result is a valid [].
+//
+// We use .get() instead of .all(): .get() returns the first matching row as a plain
+// object, or `undefined` when nothing matches — and that `undefined` is exactly the
+// signal we need for the 404 case. The id is passed as a NAMED bind parameter (@id),
+// same as the list route's filters, so there is no SQL-injection surface.
+//
+// Note on non-numeric ids (e.g. /api/issues/abc): SQLite's id column is an integer,
+// so a non-numeric value simply matches no row and falls through to the 404 below.
+// The contract only specifies 200 / 404 for this endpoint, so that is all we handle.
+router.get("/:id", (req, res) => {
+  const issue = db
+    .prepare("SELECT * FROM issues WHERE id = @id")
+    .get({ id: req.params.id });
+
+  if (issue === undefined) {
+    return res
+      .status(404)
+      .json({ error: `No issue found with id ${req.params.id}` });
+  }
+
+  // The `issues` columns line up with the contract's Issue shape, so we send the
+  // row as-is with no field mapping (same as the list route).
+  res.json(issue);
+});
+
 module.exports = router;
