@@ -1,12 +1,9 @@
-// db.js — SQLite connection + schema initialization.
+// db.js — SQLite connection + schema initialization. Opens the database file,
+// ensures the `issues` table exists, and hands back a single shared connection
+// for the routes to use.
 //
-// This file has one job: open the SQLite database file and make sure the
-// `issues` table exists, then hand back a single shared connection that the
-// rest of the app (the routes) will use.
-//
-// We use better-sqlite3, which is synchronous (its calls return results
-// directly instead of via callbacks/promises). That keeps the data code simple
-// and easy to read, which is exactly what we want here.
+// We use better-sqlite3, which is synchronous (calls return results directly
+// instead of via callbacks/promises) — simpler, more readable data code.
 
 const path = require("path");
 const fs = require("fs");
@@ -18,15 +15,13 @@ const Database = require("better-sqlite3");
 const dbPath = process.env.DB_PATH || path.join(__dirname, "..", "db", "issues.db");
 const schemaPath = path.join(__dirname, "..", "db", "schema.sql");
 
-// Open the database. better-sqlite3 creates the file automatically if it does
-// not exist yet, so first run produces a fresh, empty db/issues.db.
+// better-sqlite3 creates the file automatically if it does not exist yet, so first
+// run produces a fresh, empty db/issues.db.
 const db = new Database(dbPath);
 
 // Apply the schema. schema.sql is the single source of truth for the table
-// definition; we read it and execute it here rather than duplicating the DDL in
-// code. The statement is "CREATE TABLE IF NOT EXISTS", so running this on every
-// startup is harmless — it creates the table the first time and is a no-op
-// afterwards, never touching existing data.
+// definition. It uses "CREATE TABLE IF NOT EXISTS", so running this on every startup
+// is harmless — creates the table the first time, a no-op afterwards.
 const schemaSql = fs.readFileSync(schemaPath, "utf8");
 db.exec(schemaSql);
 

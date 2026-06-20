@@ -9,9 +9,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-// IMPORTANT: point the database at an in-memory SQLite instance BEFORE requiring
-// db.js or app.js (db.js reads process.env.DB_PATH once, at require time). This gives
-// the test a fresh, throwaway database that never touches the real db/issues.db.
+// In-memory DB, set before requiring db.js/app.js — see tests/issues.test.js for why.
 process.env.DB_PATH = ":memory:";
 
 const request = require("supertest");
@@ -54,7 +52,6 @@ for (const row of seedRows) {
 test("GET /api/dashboard returns counts by status and by severity", async () => {
   const res = await request(app).get("/api/dashboard");
 
-  // 200 OK with the two-group summary object.
   assert.equal(res.status, 200);
 
   // Exact counts, including resolved:0 — deepEqual also proves the zero bucket is

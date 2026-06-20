@@ -13,9 +13,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
 
-// IMPORTANT: point the database at an in-memory SQLite instance BEFORE requiring db.js or
-// app.js (db.js reads process.env.DB_PATH once, at require time). This gives the test a
-// fresh, throwaway database that never touches the real db/issues.db.
+// In-memory DB, set before requiring db.js/app.js — see tests/issues.test.js for why.
 process.env.DB_PATH = ":memory:";
 
 const request = require("supertest");
@@ -40,7 +38,6 @@ function importCsv(csvText) {
 test("POST /api/import imports the sample issues.csv and returns { imported: 4 }", async () => {
   const res = await importCsv(sampleCsv);
 
-  // 200 OK with the contract's { imported: N } shape.
   assert.equal(res.status, 200);
   assert.equal(res.body.imported, 4);
 
