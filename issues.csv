@@ -1,0 +1,5 @@
+title,description,site,severity,status,createdAt
+Missing consent form,Consent form not in file for patient 003,Site-101,major,open,2025-05-01T09:00:00Z
+Late visit,Visit week 4 occurred on week 6,Site-202,minor,in_progress,2025-05-03T12:30:00Z
+Drug temp excursion,IP stored above max temp for 6 hours,Site-101,critical,open,2025-05-10T08:15:00Z
+Unblinded email,Coordinator emailed treatment arm to CRA,Site-303,major,resolved,2025-05-14T16:00:00Z

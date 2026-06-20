@@ -95,7 +95,7 @@ frontend stay in sync even if built in separate sessions.
 | ✅ | `PUT` | `/api/issues/:id` | update (partial allowed); "Resolve" = set `status:"resolved"` | `200` → `Issue` / `404` |
 | ✅ | `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
 | ✅ | `GET` | `/api/dashboard` | counts | `200` (shape below) |
-|  | `POST` | `/api/import` | ingest CSV (file upload or raw CSV body) | `200` → `{ "imported": N }` |
+| ✅ | `POST` | `/api/import` | ingest CSV (raw `text/csv` body) | `200` → `{ "imported": N }` |
 
 **List query params** (all optional): `search` (case-insensitive substring on `title`),
 `status` (enum), `severity` (enum), `sort` (default `createdAt:desc`).
@@ -105,6 +105,14 @@ frontend stay in sync even if built in separate sessions.
 { "byStatus":   { "open": 0, "in_progress": 0, "resolved": 0 },
   "bySeverity": { "minor": 0, "major": 0, "critical": 0 } }
 ```
+
+**Import (`POST /api/import`):** the request body is the **raw CSV text** sent with
+`Content-Type: text/csv` (header `title,description,site,severity,status,createdAt`).
+Each row is validated with the *same* rules as create (below); a blank `severity`/`status`
+cell falls back to the defaults (`minor`/`open`). Import is **all-or-nothing**: a single
+invalid row returns `400` and imports nothing. **`createdAt` is preserved from the CSV**
+(unlike create, which stamps it server-side) — so historical sample data keeps its real
+dates; `updatedAt` is set equal to it. Success returns `{ "imported": N }`.
 
 **Validation** (else `400`): `title` & `description` required non-empty strings;
 `severity`/`status` must be in their enums (on create, default `severity:"minor"`,
@@ -144,7 +152,9 @@ frontend.
 - **DB file:** `db/issues.db` (gitignored); schema lives in `db/schema.sql`.
 - **Env vars:** `PORT`, `DB_PATH` (default `db/issues.db`).
 - **npm scripts:** `start` (run server), `dev` (auto-reload, e.g. `node --watch`),
-  `import` (load `issues.csv`), `test`.
+  `test`. (No `import` script: CSV import is **endpoint-only** — `POST /api/import`,
+  which the UI's "Upload batch" control calls — so a separate one-time script was
+  intentionally not built.)
 - **Frontend → API:** same origin, relative `/api` (no CORS, no separate host).
 - **Windows:** `better-sqlite3` is a native module — confirmed working here via a
   prebuilt binary (Node 24.17.0), no build tools needed. Keep text files at LF.
@@ -297,9 +307,9 @@ here with the reasoning, so it can go into the README and be defended in the int
 - [x] Minimal server — `server/app.js` (Express app + `GET /` health route) and
   `server/server.js` (entry point: opens the DB on boot, listens on `PORT`). `npm start`
   serves http://localhost:3000 and logs the DB row count. Express added as a dependency.
-- [ ] Backend API — `/api` routes + validation. Done: issues CRUD, `/api/dashboard`.
-  Remaining: `/api/import`.
+- [x] Backend API — `/api` routes + validation. Done: issues CRUD, `/api/dashboard`,
+  `/api/import` (raw `text/csv` body; preserves CSV `createdAt`; all-or-nothing;
+  covered by `tests/import.test.js`).
 - [ ] Frontend UI
-- [ ] CSV import
 - [ ] README
 - [ ] AWS deployment

@@ -11,6 +11,7 @@
 const express = require("express");
 const issuesRouter = require("./routes/issues");
 const dashboardRouter = require("./routes/dashboard");
+const importRouter = require("./routes/import");
 
 const app = express();
 
@@ -21,6 +22,13 @@ const app = express();
 // time a route handler runs. (The GET routes don't use a body, so they're
 // unaffected.)
 app.use(express.json());
+
+// Parse raw CSV request bodies for the import endpoint. This middleware only acts on
+// requests whose Content-Type is "text/csv"; it reads the raw body and puts the CSV
+// string straight into req.body, which routes/import.js then parses. Requests with any
+// other content type (e.g. the JSON routes above) are left untouched, so the two body
+// parsers do not interfere with each other.
+app.use(express.text({ type: "text/csv" }));
 
 // Landing / health-check route. Visiting http://localhost:3000/ returns this
 // plain text, which proves the server is up and handling requests.
@@ -36,5 +44,9 @@ app.use("/api/issues", issuesRouter);
 // Dashboard summary. Its own router (counts, not CRUD) mounted at its own top-level
 // /api path — it is NOT under /api/issues.
 app.use("/api/dashboard", dashboardRouter);
+
+// CSV import. Its own router mounted at its own top-level /api path (it is NOT under
+// /api/issues). Accepts a raw text/csv body and bulk-creates issues from it.
+app.use("/api/import", importRouter);
 
 module.exports = app;
