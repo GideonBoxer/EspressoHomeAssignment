@@ -103,11 +103,13 @@
         </section>
 
         <!-- =================== DASHBOARD PAGE =================== -->
-        <!-- Placeholder only for now: the nav target exists so the shell is complete;
-             the counts/chips wired to GET /api/dashboard are a separate follow-up. -->
+        <!-- The counts come from GET /api/dashboard. app.js fills #dashboard-body each
+             time this page is opened (see wireNavigation), building two rows of count
+             chips (by status, by severity) plus a "Breakdown" bar chart. Built in JS —
+             same approach as the issues table — so the markup here stays a thin shell. -->
         <section id="page-dashboard" class="page">
           <h1 class="page-title">Dashboard</h1>
-          <p class="placeholder">Dashboard coming soon.</p>
+          <div id="dashboard-body"></div>
         </section>
       </main>
     </div>

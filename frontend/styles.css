@@ -516,3 +516,111 @@ textarea.input {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* ----------------------------- Dashboard ----------------------------- */
+/* The dashboard page: two rows of count chips (by status, by severity) and a
+   "Breakdown" bar chart. app.js builds the elements; these rules style them. The dot
+   and bar-fill COLOURS are set inline by app.js (from METRIC_META) so they match the
+   table badges; everything structural here uses the shared palette variables. */
+
+/* Small uppercased heading above each chip group and the breakdown. */
+.metric-heading {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+
+/* Vertical spacing between the status group, the severity group and the breakdown. */
+.metric-section {
+  margin-bottom: 26px;
+}
+
+/* A row of three equal-width chips. They share the width evenly via the grid. */
+.chips-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+/* One count chip: a coloured dot + label on the left, the count on the right. */
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+/* The little round status/severity colour marker (colour set inline by app.js). */
+.chip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chip-label {
+  font-size: 15px;
+}
+
+/* margin-left:auto pushes the number to the right edge of the chip. tabular-nums keeps
+   the digits aligned so a row of chips reads tidily. */
+.chip-count {
+  margin-left: auto;
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The breakdown sits under a thin divider so it reads as a separate block. */
+.breakdown {
+  border-top: 1px solid var(--border);
+  padding-top: 22px;
+}
+
+/* Each bar is a 3-column grid: fixed label | flexible track | fixed value. */
+.bar-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 40px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bar-label {
+  font-size: 14px;
+  text-align: right;
+  color: var(--text);
+}
+
+/* The full-width pale rail; the coloured fill sits inside it. overflow:hidden keeps the
+   fill's rounded corners clipped to the track. */
+.bar-track {
+  background: var(--bg-code);
+  border-radius: 999px;
+  height: 12px;
+  overflow: hidden;
+}
+
+/* The coloured part of the bar. Its width (a percentage) and colour are set inline by
+   app.js per value. */
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.bar-value {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* A small gap between the status bars and the severity bars in the breakdown. */
+.bar-gap {
+  height: 10px;
+}
