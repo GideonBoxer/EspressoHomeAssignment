@@ -10,6 +10,7 @@
 
 const express = require("express");
 const issuesRouter = require("./routes/issues");
+const dashboardRouter = require("./routes/dashboard");
 
 const app = express();
 
@@ -31,5 +32,9 @@ app.get("/", (req, res) => {
 // mounted here under its /api base path. The issues router handles everything
 // below /api/issues (e.g. GET /api/issues for the list).
 app.use("/api/issues", issuesRouter);
+
+// Dashboard summary. Its own router (counts, not CRUD) mounted at its own top-level
+// /api path — it is NOT under /api/issues.
+app.use("/api/dashboard", dashboardRouter);
 
 module.exports = app;
