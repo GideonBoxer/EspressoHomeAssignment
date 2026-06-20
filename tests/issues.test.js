@@ -261,3 +261,101 @@ test("POST /api/issues rejects an invalid status with 400", async () => {
   assert.equal(res.status, 400);
   assert.equal(typeof res.body.error, "string");
 });
+
+// --- PUT /api/issues/:id (update) -------------------------------------------
+//
+// Each test first creates its own issue via POST and operates on that returned
+// id, so it never depends on the seeded rows (whose count earlier tests assert).
+
+test("PUT /api/issues/:id updates the sent fields and leaves the rest unchanged", async () => {
+  // Create a known issue to edit.
+  const created = await request(app).post("/api/issues").send({
+    title: "Original title",
+    description: "Original description",
+    site: "Site-101",
+    severity: "minor",
+    status: "open",
+  });
+  const { id } = created.body;
+
+  // Send a PARTIAL update: only title and status. description/site/severity are
+  // omitted and must keep their original values.
+  const res = await request(app)
+    .put(`/api/issues/${id}`)
+    .send({ title: "Updated title", status: "in_progress" });
+
+  // 200 OK with the updated Issue as a single object.
+  assert.equal(res.status, 200);
+  assert.ok(!Array.isArray(res.body));
+
+  // Sent fields changed...
+  assert.equal(res.body.title, "Updated title");
+  assert.equal(res.body.status, "in_progress");
+
+  // ...omitted fields unchanged.
+  assert.equal(res.body.description, "Original description");
+  assert.equal(res.body.site, "Site-101");
+  assert.equal(res.body.severity, "minor");
+
+  // createdAt is untouched; updatedAt was refreshed by the server (so it differs).
+  assert.equal(res.body.createdAt, created.body.createdAt);
+  assert.equal(typeof res.body.updatedAt, "string");
+  assert.notEqual(res.body.updatedAt, created.body.updatedAt);
+
+  // It really persisted: fetching by id returns the updated values.
+  const fetched = await request(app).get(`/api/issues/${id}`);
+  assert.equal(fetched.status, 200);
+  assert.equal(fetched.body.title, "Updated title");
+  assert.equal(fetched.body.status, "in_progress");
+});
+
+test("PUT /api/issues/:id resolves an issue (status -> resolved)", async () => {
+  const created = await request(app).post("/api/issues").send({
+    title: "To be resolved",
+    description: "An open issue",
+    status: "open",
+  });
+
+  const res = await request(app)
+    .put(`/api/issues/${created.body.id}`)
+    .send({ status: "resolved" });
+
+  assert.equal(res.status, 200);
+  assert.equal(res.body.status, "resolved");
+});
+
+test("PUT /api/issues/:id returns 404 for an id that doesn't exist", async () => {
+  const res = await request(app)
+    .put("/api/issues/99999")
+    .send({ status: "resolved" });
+
+  assert.equal(res.status, 404);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("PUT /api/issues/:id rejects an invalid status with 400", async () => {
+  const created = await request(app)
+    .post("/api/issues")
+    .send({ title: "valid", description: "valid" });
+
+  const res = await request(app)
+    .put(`/api/issues/${created.body.id}`)
+    .send({ status: "banana" });
+
+  assert.equal(res.status, 400);
+  assert.equal(typeof res.body.error, "string");
+});
+
+test("PUT /api/issues/:id rejects blanking out a required field with 400", async () => {
+  const created = await request(app)
+    .post("/api/issues")
+    .send({ title: "valid", description: "valid" });
+
+  // A whitespace-only title is not a real value, so it must be rejected.
+  const res = await request(app)
+    .put(`/api/issues/${created.body.id}`)
+    .send({ title: "   " });
+
+  assert.equal(res.status, 400);
+  assert.equal(typeof res.body.error, "string");
+});

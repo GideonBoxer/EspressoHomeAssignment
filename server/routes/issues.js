@@ -205,4 +205,102 @@ router.get("/:id", (req, res) => {
   res.json(issue);
 });
 
+// PUT /api/issues/:id — update an existing issue (the "edit" / "resolve" route).
+//
+// Per the contract a PUT may be PARTIAL: the client sends only the fields it wants
+// to change, and any field it omits keeps its current value. ("Resolve" is just a
+// PUT that sets status:"resolved" — there is no separate endpoint for it.)
+//
+// The handler reads in three clear steps:
+//   1. Load the existing row first. If there is none, return 404 immediately — we
+//      do not bother validating input for a row that cannot be updated.
+//   2. Validate only the fields that are actually present in the body. A field that
+//      is required on the model (title, description) still cannot be blanked out
+//      when it IS sent, but it may be omitted; the enum fields must be valid when
+//      sent. This is why we check `!== undefined` before the required-string checks.
+//   3. Merge the present fields over the existing row, always refreshing updatedAt
+//      (so the timestamp reflects this edit), and never touching id or createdAt.
+router.put("/:id", (req, res) => {
+  // Step 1: load the existing row, exactly like GET /:id. .get() returns the row
+  // or `undefined`, and that `undefined` is our 404 signal.
+  const existing = db
+    .prepare("SELECT * FROM issues WHERE id = @id")
+    .get({ id: req.params.id });
+
+  if (existing === undefined) {
+    return res
+      .status(404)
+      .json({ error: `No issue found with id ${req.params.id}` });
+  }
+
+  // Step 2: validate only the fields the client actually sent. Guard against a
+  // completely missing body so the reads below never throw on `undefined`.
+  const body = req.body || {};
+  const { title, description, site, severity, status } = body;
+
+  // title / description — optional on update, but if sent they must still be a
+  // non-empty string (a required field cannot be blanked out by an edit).
+  if (title !== undefined) {
+    const titleError = requireNonEmptyString(title, "title");
+    if (titleError !== null) {
+      return res.status(400).json({ error: titleError });
+    }
+  }
+  if (description !== undefined) {
+    const descriptionError = requireNonEmptyString(description, "description");
+    if (descriptionError !== null) {
+      return res.status(400).json({ error: descriptionError });
+    }
+  }
+
+  // site — optional; if sent it must be a string (same one-off rule as POST).
+  if (site !== undefined && typeof site !== "string") {
+    return res.status(400).json({ error: "site must be a string" });
+  }
+
+  // severity / status — validateEnum treats an omitted value as valid, so we can
+  // call it directly: it only rejects a present-but-unknown value.
+  const severityError = validateEnum(severity, SEVERITIES, "severity");
+  if (severityError !== null) {
+    return res.status(400).json({ error: severityError });
+  }
+  const statusError = validateEnum(status, STATUSES, "status");
+  if (statusError !== null) {
+    return res.status(400).json({ error: statusError });
+  }
+
+  // Step 3: merge present fields over the existing row. For each mutable column,
+  // use the client's value when it was sent, otherwise keep what is already stored.
+  // updatedAt is always refreshed; id and createdAt come from the existing row and
+  // are never changed by an edit.
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `UPDATE issues
+        SET title = @title,
+            description = @description,
+            site = @site,
+            severity = @severity,
+            status = @status,
+            updatedAt = @updatedAt
+      WHERE id = @id`
+  ).run({
+    id: existing.id,
+    title: title !== undefined ? title : existing.title,
+    description: description !== undefined ? description : existing.description,
+    site: site !== undefined ? site : existing.site,
+    severity: severity !== undefined ? severity : existing.severity,
+    status: status !== undefined ? status : existing.status,
+    updatedAt: now,
+  });
+
+  // Read the row back and return it, so the response is exactly what was stored
+  // (same approach as POST and GET /:id).
+  const updated = db
+    .prepare("SELECT * FROM issues WHERE id = @id")
+    .get({ id: existing.id });
+
+  res.json(updated);
+});
+
 module.exports = router;
