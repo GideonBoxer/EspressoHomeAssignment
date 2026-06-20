@@ -94,7 +94,7 @@ frontend stay in sync even if built in separate sessions.
 | ✅ | `GET` | `/api/issues/:id` | detail | `200` → `Issue` / `404` |
 | ✅ | `PUT` | `/api/issues/:id` | update (partial allowed); "Resolve" = set `status:"resolved"` | `200` → `Issue` / `404` |
 | ✅ | `DELETE` | `/api/issues/:id` | delete | `204` / `404` |
-|  | `GET` | `/api/dashboard` | counts | `200` (shape below) |
+| ✅ | `GET` | `/api/dashboard` | counts | `200` (shape below) |
 |  | `POST` | `/api/import` | ingest CSV (file upload or raw CSV body) | `200` → `{ "imported": N }` |
 
 **List query params** (all optional): `search` (case-insensitive substring on `title`),
@@ -297,7 +297,8 @@ here with the reasoning, so it can go into the README and be defended in the int
 - [x] Minimal server — `server/app.js` (Express app + `GET /` health route) and
   `server/server.js` (entry point: opens the DB on boot, listens on `PORT`). `npm start`
   serves http://localhost:3000 and logs the DB row count. Express added as a dependency.
-- [ ] Backend API — `/api` routes (issues CRUD, `/api/dashboard`, `/api/import`) + validation
+- [ ] Backend API — `/api` routes + validation. Done: issues CRUD, `/api/dashboard`.
+  Remaining: `/api/import`.
 - [ ] Frontend UI
 - [ ] CSV import
 - [ ] README
