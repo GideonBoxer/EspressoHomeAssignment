@@ -10,8 +10,9 @@
 //   4. the Create/Edit modal
 //   5. the Delete confirmation modal
 //   6. the CSV upload
-//   7. sidebar navigation
-//   8. startup wiring
+//   7. the dashboard page (counts + breakdown bars)
+//   8. sidebar navigation
+//   9. startup wiring
 //
 // Everything runs after the page's HTML has loaded (see the DOMContentLoaded
 // listener at the very bottom), so all the elements it looks up already exist.
@@ -466,7 +467,168 @@ function wireCsvUpload() {
   });
 }
 
-// ============================ 7. Sidebar navigation ============================
+// ============================ 7. Dashboard page ============================
+
+// Display metadata for every status/severity value: the human-readable label and the
+// colour used for both its chip dot and its breakdown bar. These colours are the same
+// ones the issues table badges use (see .badge-* in styles.css), so the dashboard and
+// the table read as one palette. Keeping label + colour together here is the single
+// source of truth, so a chip and its matching bar can never drift apart.
+const METRIC_META = {
+  open: { label: "Open", color: "#b35a35" }, // orange — matches .badge-open
+  in_progress: { label: "In progress", color: "#3b6090" }, // blue — .badge-in_progress
+  resolved: { label: "Resolved", color: "#3d6b4a" }, // green — --green-hover
+  minor: { label: "Minor", color: "#5b6470" }, // gray — .badge-minor
+  major: { label: "Major", color: "#b35a35" }, // orange — .badge-major
+  critical: { label: "Critical", color: "#a04340" }, // red — --red-hover
+};
+
+// Fixed display order for each group (mirrors the server's enum order). The API returns
+// the counts as an object keyed by these values; we iterate these arrays so the chips
+// and bars always appear in this order regardless of object key order.
+const STATUS_KEYS = ["open", "in_progress", "resolved"];
+const SEVERITY_KEYS = ["minor", "major", "critical"];
+
+// Fetch the dashboard counts and render them. Called every time the user opens the
+// Dashboard page (see wireNavigation), so the numbers always reflect the latest creates,
+// edits, resolves and deletes — there is nothing to keep in sync by hand.
+async function loadDashboard() {
+  try {
+    const data = await apiRequest("/api/dashboard");
+    renderDashboard(data);
+  } catch (err) {
+    showNotice("Could not load dashboard: " + err.message, "error");
+  }
+}
+
+// Build the whole dashboard from the API response:
+//   { byStatus: { open, in_progress, resolved }, bySeverity: { minor, major, critical } }
+// We rebuild from scratch each open (clear, then append) — the same simple approach the
+// issues table uses. Layout: a "by status" chip row, a "by severity" chip row, then a
+// "Breakdown" bar chart of all six counts.
+function renderDashboard(data) {
+  const body = byId("dashboard-body");
+  body.replaceChildren(); // clear whatever a previous open left behind
+
+  // All six bars are scaled against the single largest count, so a bar's length is
+  // comparable across both groups. Math.max(..., 1) guards the empty-database case
+  // (every count 0) so we never divide by zero when computing bar widths.
+  const allCounts = [
+    ...STATUS_KEYS.map((key) => data.byStatus[key]),
+    ...SEVERITY_KEYS.map((key) => data.bySeverity[key]),
+  ];
+  const maxCount = Math.max(...allCounts, 1);
+
+  body.appendChild(buildChipSection("By status", STATUS_KEYS, data.byStatus));
+  body.appendChild(buildChipSection("By severity", SEVERITY_KEYS, data.bySeverity));
+  body.appendChild(buildBreakdown(data, maxCount));
+}
+
+// One chip group: a small heading ("By status") above a row of count chips, one chip per
+// key in `keys`. `counts` is the matching object from the API (byStatus or bySeverity).
+function buildChipSection(headingText, keys, counts) {
+  const section = document.createElement("div");
+  section.className = "metric-section";
+
+  section.appendChild(metricHeading(headingText));
+
+  const row = document.createElement("div");
+  row.className = "chips-row";
+  for (const key of keys) {
+    row.appendChild(buildChip(key, counts[key]));
+  }
+  section.appendChild(row);
+
+  return section;
+}
+
+// One count chip: a coloured dot + label on the left, the count on the right. The dot
+// colour comes from METRIC_META so it matches the same value's table badge and bar.
+function buildChip(key, count) {
+  const chip = document.createElement("div");
+  chip.className = "chip";
+
+  const dot = document.createElement("span");
+  dot.className = "chip-dot";
+  dot.style.background = METRIC_META[key].color;
+  chip.appendChild(dot);
+
+  const label = document.createElement("span");
+  label.className = "chip-label";
+  label.textContent = METRIC_META[key].label;
+  chip.appendChild(label);
+
+  const value = document.createElement("span");
+  value.className = "chip-count";
+  value.textContent = count;
+  chip.appendChild(value);
+
+  return chip;
+}
+
+// The "Breakdown" section: a labelled bar for every count. Status bars first, then a
+// small spacer, then severity bars — so the two groups read as one comparable chart
+// (all bars share the same scale, `maxCount`).
+function buildBreakdown(data, maxCount) {
+  const section = document.createElement("div");
+  section.className = "metric-section breakdown";
+
+  section.appendChild(metricHeading("Breakdown"));
+
+  for (const key of STATUS_KEYS) {
+    section.appendChild(buildBar(key, data.byStatus[key], maxCount));
+  }
+
+  // A thin spacer row visually separates the status bars from the severity bars.
+  const gap = document.createElement("div");
+  gap.className = "bar-gap";
+  section.appendChild(gap);
+
+  for (const key of SEVERITY_KEYS) {
+    section.appendChild(buildBar(key, data.bySeverity[key], maxCount));
+  }
+
+  return section;
+}
+
+// One bar row: label | track (with a coloured fill) | numeric value. The fill's width is
+// this count as a percentage of the largest count, and its colour comes from METRIC_META.
+function buildBar(key, count, maxCount) {
+  const row = document.createElement("div");
+  row.className = "bar-row";
+
+  const label = document.createElement("span");
+  label.className = "bar-label";
+  label.textContent = METRIC_META[key].label;
+  row.appendChild(label);
+
+  const track = document.createElement("div");
+  track.className = "bar-track";
+  const fill = document.createElement("div");
+  fill.className = "bar-fill";
+  fill.style.width = (count / maxCount) * 100 + "%";
+  fill.style.background = METRIC_META[key].color;
+  track.appendChild(fill);
+  row.appendChild(track);
+
+  const value = document.createElement("span");
+  value.className = "bar-value";
+  value.textContent = count;
+  row.appendChild(value);
+
+  return row;
+}
+
+// Helper: a small uppercased section heading ("By status", "Breakdown"). Shared by the
+// chip groups and the breakdown so they all look the same.
+function metricHeading(text) {
+  const heading = document.createElement("p");
+  heading.className = "metric-heading";
+  heading.textContent = text;
+  return heading;
+}
+
+// ============================ 8. Sidebar navigation ============================
 
 // Switch the visible page by toggling the is-active class on the matching nav
 // button and <section>. data-page on each nav button names its target section id
@@ -487,11 +649,18 @@ function wireNavigation() {
       document.querySelectorAll(".page").forEach((section) => {
         section.classList.toggle("is-active", section.id === "page-" + page);
       });
+
+      // The Dashboard page is loaded fresh each time it is opened, so its counts
+      // always reflect the latest issues. (The Issues list is already loaded on
+      // startup and reloads itself after every change, so it needs nothing here.)
+      if (page === "dashboard") {
+        loadDashboard();
+      }
     });
   });
 }
 
-// ============================ 8. Startup ============================
+// ============================ 9. Startup ============================
 
 // Wire up every control once, then load the initial list. Runs after the HTML is
 // parsed so all the elements exist.
